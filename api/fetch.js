@@ -1,7 +1,7 @@
 export const runtime = 'nodejs'
 
 import chromium from '@sparticuz/chromium'
-import playwright from 'playwright-core'
+import puppeteer from 'puppeteer-core'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -27,24 +27,19 @@ export default async function handler(req, res) {
   let browser
 
   try {
-    chromium.setHeadlessMode = true
-    chromium.setGraphicsMode = false
-
     const executablePath = await chromium.executablePath()
 
-    browser = await playwright.chromium.launch({
+    browser = await puppeteer.launch({
       executablePath,
-      headless: true,
+      headless: chromium.headless,
       args: chromium.args
     })
 
-    const context = await browser.newContext({
-      userAgent:
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-      viewport: { width: 1366, height: 768 }
-    })
+    const page = await browser.newPage()
 
-    const page = await context.newPage()
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+    )
 
     const iframeSrcs = new Set()
 
@@ -57,25 +52,27 @@ export default async function handler(req, res) {
 
     await page.goto(target.href, {
       waitUntil: 'domcontentloaded',
-      timeout: 25000
+      timeout: 30000
     })
 
     // Wait for scripts
-    await page.waitForTimeout(4000)
+    await new Promise(r => setTimeout(r, 4000))
 
-    // Simulate human clicks (unlocks fake play buttons)
+    // Click center of screen a few times (fake play buttons)
+    const { width, height } = await page.viewport()
     for (let i = 0; i < 3; i++) {
-      await page.mouse.click(683, 384)
-      await page.waitForTimeout(1500)
+      await page.mouse.click(width / 2, height / 2)
+      await new Promise(r => setTimeout(r, 1500))
     }
 
     // Final iframe sweep
-    page.frames().forEach(frame => {
+    const frames = page.frames()
+    for (const frame of frames) {
       const src = frame.url()
       if (src && src.startsWith('http')) {
         iframeSrcs.add(src)
       }
-    })
+    }
 
     const finalUrl = page.url()
 
@@ -88,13 +85,9 @@ export default async function handler(req, res) {
 
   } catch (err) {
     if (browser) {
-      try {
-        await browser.close()
-      } catch {}
+      try { await browser.close() } catch {}
     }
 
-    return res.status(500).json({
-      error: err.message
-    })
+    return res.status(500).json({ error: err.message })
   }
 }
