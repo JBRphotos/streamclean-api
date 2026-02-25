@@ -1,12 +1,11 @@
 {
   "name": "streamclean-api",
   "version": "1.0.0",
-  "description": "Headless browser fetch API for StreamClean",
   "private": true,
   "type": "module",
   "dependencies": {
     "@sparticuz/chromium": "^119.0.2",
-    "playwright-core": "^1.40.0"
+    "puppeteer-core": "^22.6.0"
   },
   "engines": {
     "node": "20.x"
