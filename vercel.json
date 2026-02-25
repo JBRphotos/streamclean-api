@@ -1,7 +1,6 @@
 {
   "functions": {
     "api/fetch.js": {
-      "runtime": "nodejs",
       "memory": 1024,
       "maxDuration": 30
     }
