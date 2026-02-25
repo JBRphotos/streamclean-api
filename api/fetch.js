@@ -41,7 +41,7 @@ export default async function handler(req, res) {
     browser = await chromium.launch({
       args: chromiumPkg.args,
       executablePath: await chromiumPkg.executablePath(),
-      headless: chromiumPkg.headless,
+      headless: true,
     });
 
     const context = await browser.newContext({
