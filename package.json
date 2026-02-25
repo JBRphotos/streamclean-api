@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "description": "Headless browser fetch API for StreamClean",
   "private": true,
+  "type": "module",
   "dependencies": {
-    "@sparticuz/chromium": "^123.0.0",
-    "playwright-core": "^1.44.0"
+    "@sparticuz/chromium": "^119.0.2",
+    "playwright-core": "^1.40.0"
   },
   "engines": {
-    "node": "24.x"
+    "node": "20.x"
   }
 }
