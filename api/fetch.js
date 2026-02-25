@@ -1,7 +1,7 @@
 export const runtime = 'nodejs'
 
 import chromium from '@sparticuz/chromium'
-import { chromium as playwrightChromium } from 'playwright-core'
+import playwright from 'playwright-core'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -20,9 +20,6 @@ export default async function handler(req, res) {
   let target
   try {
     target = new URL(url)
-    if (!['http:', 'https:'].includes(target.protocol)) {
-      return res.status(400).json({ error: 'Invalid URL protocol' })
-    }
   } catch {
     return res.status(400).json({ error: 'Invalid URL' })
   }
@@ -30,29 +27,22 @@ export default async function handler(req, res) {
   let browser
 
   try {
+    chromium.setHeadlessMode = true
+    chromium.setGraphicsMode = false
+
     const executablePath = await chromium.executablePath()
 
-    browser = await playwrightChromium.launch({
+    browser = await playwright.chromium.launch({
       executablePath,
       headless: true,
-      args: [
-        ...chromium.args,
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage'
-      ]
+      args: chromium.args
     })
 
     const context = await browser.newContext({
       userAgent:
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-      viewport: { width: 1366, height: 768 },
-      locale: 'en-US',
-      timezoneId: 'America/New_York'
+      viewport: { width: 1366, height: 768 }
     })
-
-    // Block only heavy media, allow fonts and SVGs for reliability
-    await context.route('**/*.{mp4,mp3,avi,webm}', route => route.abort())
 
     const page = await context.newPage()
 
@@ -70,42 +60,16 @@ export default async function handler(req, res) {
       timeout: 25000
     })
 
-    // Let scripts settle
-    await page.waitForTimeout(3000)
+    // Wait for scripts
+    await page.waitForTimeout(4000)
 
-    // Simulate human clicks to trigger hidden players
+    // Simulate human clicks (unlocks fake play buttons)
     for (let i = 0; i < 3; i++) {
       await page.mouse.click(683, 384)
       await page.waitForTimeout(1500)
     }
 
-    // Attempt to close obvious popups
-    const possibleButtons = [
-      'button',
-      '[role="button"]',
-      'div'
-    ]
-
-    for (const selector of possibleButtons) {
-      const elements = await page.$$(selector)
-      for (const el of elements) {
-        try {
-          const text = (await el.innerText()).toLowerCase()
-          if (
-            text.includes('close') ||
-            text.includes('skip') ||
-            text.includes('continue') ||
-            text.includes('play')
-          ) {
-            await el.click({ timeout: 500 })
-          }
-        } catch {}
-      }
-    }
-
-    // Final wait for delayed iframe injection
-    await page.waitForTimeout(4000)
-
+    // Final iframe sweep
     page.frames().forEach(frame => {
       const src = frame.url()
       if (src && src.startsWith('http')) {
