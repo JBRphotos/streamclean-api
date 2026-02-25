@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import chromium from '@sparticuz/chromium'
 import { chromium as playwrightChromium } from 'playwright-core'
 
